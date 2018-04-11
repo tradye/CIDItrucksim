@@ -21,3 +21,4 @@ Interpolate.m:linear interpolate of linear velocity and matrix Q
 
 truck_LQRController.m:the main file of s-function
 
+
