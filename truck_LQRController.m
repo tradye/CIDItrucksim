@@ -1,6 +1,6 @@
 %% truck_LQRController S-function 20180326 xuhao
 % states£ºlateral_error£¬lateral_error_rate£¬heading_error£¬heading_error_rate
-% input£ºx,y,theta(heading),linear_v,angular_v
+% input£ºx,y,theta(heading),linear_v,angular_v,trailer_x,trailer_y,trailer_heading,trailer_heading_rate
 % output£ºsteer_angle,v(v is constant)
 
 function [sys,x0,str,ts] = truck_LQRController(t,x,u,flag)
@@ -30,7 +30,7 @@ function [sys,x0,str,ts] = mdlInitializeSizes
     sizes.NumContStates  = 0;
     sizes.NumDiscStates   = 4;
     sizes.NumOutputs      = 2;
-    sizes.NumInputs         = 9; % x,y,heading,linear_v£¬angular_v
+    sizes.NumInputs         = 9; % x,y,heading,linear_v£¬angular_v,trailer_x,trailer_y,trailer_heading,trailer_heading_rate
     sizes.DirFeedthrough = 1; % Matrix D is non-empty.
     sizes.NumSampleTimes = 1;
     sys = simsizes(sizes); 
@@ -50,14 +50,30 @@ function sys = mdlOutputs(t,x,u)
     basic_state_size = 4;
     global target_points;
     global t_sim;
+%     global num_i;
     
+%     persistent truck_x_;
+%     persistent truck_y_;
+%     persistent truck_heading_;
+%     persistent truck_lateral_err;
+%     persistent truck_heading_err;
+%     
+%     persistent truck_state_;
+    persistent time_sequence;
+    persistent path_index;
+    persistent path_x;
+    persistent path_y;
+    persistent path_heading;
+    persistent steer_angle_;
     persistent truck_x_;
     persistent truck_y_;
     persistent truck_heading_;
     persistent truck_lateral_err;
     persistent truck_heading_err;
-    
-    persistent truck_state_;
+    persistent trailer_x_;
+    persistent trailer_y_;
+    persistent trailer_heading_;
+    persistent trailer_heading_rate;
     
     num_i = calculate();
    
@@ -77,7 +93,7 @@ function sys = mdlOutputs(t,x,u)
     lqr_max_iteration_ = 800;%150
     lqr_eps_ = 0.01;
     
-
+    tic
 %% define variables
     output =zeros(Nu,1);previousOutput =zeros(Nu,1);
     lateral_error_ = 0.0;heading_error_ = 0.0;
@@ -95,15 +111,14 @@ function sys = mdlOutputs(t,x,u)
     trailer_angular_v = u(9) * pi / 180; %  the unit of angular in trucksim is deg/s, transform to rad/s
     
     fprintf('num_i = %f \n',num_i); 
-    fprintf('trailer_x = %f \n',trailer_x); 
-    fprintf('trailer_y = %f \n',trailer_y); 
-    fprintf('trailer_heading = %f \n',trailer_heading); 
-    fprintf('trailer_angular_v = %f \n',trailer_angular_v); 
-%     truck_x_ = [];
-%     truck_y_ = [];
-    truck_x_(num_i,1) = truck_x;
-    truck_y_(num_i,1) = truck_y;
-    truck_heading_(num_i,1) = truck_heading;
+%     fprintf('trailer_x = %f \n',trailer_x); 
+%     fprintf('trailer_y = %f \n',trailer_y); 
+%     fprintf('trailer_heading = %f \n',trailer_heading); 
+%     fprintf('trailer_angular_v = %f \n',trailer_angular_v); 
+
+%     truck_x_(num_i,1) = truck_x;
+%     truck_y_(num_i,1) = truck_y;
+%     truck_heading_(num_i,1) = truck_heading;
 % 
 %     [fid , msg] = fopen('D:\CIDI\codes\matlab\MPC_LQR\truck_x.txt','wt');
 %     if fid == -1
@@ -128,9 +143,6 @@ function sys = mdlOutputs(t,x,u)
 %     end
     
     target_points = readPlanPoints();
-%     for i = 1:1:size(target_points.v)
-%         target_points.v(i) = target_points.v(i) - 15;
-%     end
     
     matrix_A =zeros(basic_state_size,basic_state_size);
     matrix_Ad =zeros(basic_state_size,basic_state_size); %vehicle state matrix (discrete-time)
@@ -175,10 +187,10 @@ function sys = mdlOutputs(t,x,u)
     %% matrix_state init
     
 %     [com_x,com_y] =ComputeCOMPosition(lr_,0,truck_x,truck_y,0);%compute COG based on truck position 
-    tic
+    
     [lateral_error_,lateral_error_rate,heading_error_,heading_error_rate,index_min]= ...
         ComputeLateralErrors(truck_x,truck_y,truck_heading,truck_linear_v,truck_angular_v);% 
-    toc
+    
     if(heading_error_  > pi)
         heading_error_ = heading_error_ - 2*pi;
     elseif (heading_error_  < -pi)
@@ -191,14 +203,13 @@ function sys = mdlOutputs(t,x,u)
     matrix_state(3,1) = heading_error_;
     matrix_state(4,1) = heading_error_rate;
     
-    truck_lateral_err(num_i,1) = lateral_error_;
-    truck_heading_err(num_i,1) = heading_error_;
-    truck_state_tmp = [num_i index_min target_points.x(index_min)  target_points.y(index_min) target_points.theta(index_min) ...
-                                  truck_x truck_y truck_heading lateral_error_ heading_error_];
+%     truck_lateral_err(num_i,1) = lateral_error_;
+%     truck_heading_err(num_i,1) = heading_error_;
     
-    for i = 1:1:size(truck_state_tmp , 2)
-        truck_state_(num_i , i) = truck_state_tmp(i);
-    end
+    
+%     for i = 1:1:size(truck_state_tmp , 2)
+%         truck_state_(num_i , i) = truck_state_tmp(i);
+%     end
     
 %     [fid , msg] = fopen('D:\CIDI\codes\matlab\MPC_LQR\truck_lateralerr.txt','wt');
 %     if fid == -1
@@ -245,13 +256,35 @@ function sys = mdlOutputs(t,x,u)
         steer_angle = -steer_single_direction_max_degree_;
     end
     %% s-function output
+    truck_state_tmp = [num_i index_min target_points.x(index_min)  target_points.y(index_min) target_points.theta(index_min) ...
+                                  steer_angle truck_x truck_y truck_heading lateral_error_ heading_error_ trailer_x trailer_y trailer_heading trailer_angular_v];
+                              
+    time_sequence(num_i,1) = truck_state_tmp(1);
+    path_index(num_i,1) = truck_state_tmp(2);
+    path_x(num_i,1) = truck_state_tmp(3);
+    path_y(num_i,1) = truck_state_tmp(4);
+    path_heading(num_i,1) = truck_state_tmp(5);
+    steer_angle_(num_i,1) = truck_state_tmp(6);
+    truck_x_(num_i,1) = truck_state_tmp(7);
+    truck_y_(num_i,1) = truck_state_tmp(8);
+    truck_heading_(num_i,1) = truck_state_tmp(9);
+    truck_lateral_err(num_i,1) = truck_state_tmp(10);
+    truck_heading_err(num_i,1) = truck_state_tmp(11);
+    trailer_x_(num_i,1) = truck_state_tmp(12);
+    trailer_y_(num_i,1) = truck_state_tmp(13);
+    trailer_heading_(num_i,1) = truck_state_tmp(14);
+    trailer_heading_rate(num_i,1) = truck_state_tmp(15);
+    
     output(1,1) = steer_angle ;                         %unit deg
     output(2,1) = target_points.v(index_min) ;  %unit m/s
     fprintf('index_min = %f \n',index_min);
-    t_sim = 20; %51.5  30
-    if (num_i == (t_sim * 100+1)) 
+    t_sim = 34 ;%51.5  30
+    if (num_i == (t_sim * 100+1) || ...
+            sqrt( (truck_x - target_points.x(size(target_points.x , 1)))^2 + (truck_y - target_points.y(size(target_points.y , 1))) ^2 ) < 0.02 )
         plot_plot(truck_x_,truck_y_,target_points.x,target_points.y,truck_lateral_err,truck_heading_err);
-        T = table(truck_state_);
+        T = table(time_sequence,path_index, path_x, path_y, path_heading, steer_angle_,...
+                   truck_x_, truck_y_, truck_heading_, truck_lateral_err, truck_heading_err ,...
+                   trailer_x_ ,trailer_y_ , trailer_heading_ ,  trailer_heading_rate);
         writetable(T,'truck_state_.csv');
         
     end
@@ -271,7 +304,7 @@ function sys = mdlOutputs(t,x,u)
 %     sys = mdlTerminate(t,x,u);% terminate simulation
 %     sys = [];
 %     
-    
+    toc
     
     
 
