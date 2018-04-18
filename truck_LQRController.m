@@ -7,16 +7,19 @@ function [sys,x0,str,ts] = truck_LQRController(t,x,u,flag)
 
 switch flag,
  case 0
-  [sys,x0,str,ts] = mdlInitializeSizes; % Initialization
+    [sys,x0,str,ts] = mdlInitializeSizes; % Initialization
   
  case 2
-  sys = mdlUpdates(t,x,u); % Update discrete states
+    sys = mdlUpdates(t,x,u); % Update discrete states
   
  case 3
-  sys = mdlOutputs(t,x,u); % Calculate outputs
+    sys = mdlOutputs(t,x,u); % Calculate outputs
+  
+%  case 9
+%     sys = mdlTerminate(t,x,u);% terminate simulation
  
  case {1,4,9} % Unused flags
-  sys = [];
+    sys = [];
   
  otherwise
   error(['unhandled flag = ',num2str(flag)]); % Error handling
@@ -27,7 +30,7 @@ function [sys,x0,str,ts] = mdlInitializeSizes
     sizes.NumContStates  = 0;
     sizes.NumDiscStates   = 4;
     sizes.NumOutputs      = 2;
-    sizes.NumInputs         = 5; % x,y,heading,linear_v£¬angular_v
+    sizes.NumInputs         = 9; % x,y,heading,linear_v£¬angular_v
     sizes.DirFeedthrough = 1; % Matrix D is non-empty.
     sizes.NumSampleTimes = 1;
     sys = simsizes(sizes); 
@@ -50,8 +53,12 @@ function sys = mdlOutputs(t,x,u)
     
     persistent truck_x_;
     persistent truck_y_;
+    persistent truck_heading_;
     persistent truck_lateral_err;
     persistent truck_heading_err;
+    
+    persistent truck_state_;
+    
     num_i = calculate();
    
     pi = 3.1415926;
@@ -69,7 +76,7 @@ function sys = mdlOutputs(t,x,u)
     Vx = 0.0;
     lqr_max_iteration_ = 800;%150
     lqr_eps_ = 0.01;
-    tic
+    
 
 %% define variables
     output =zeros(Nu,1);previousOutput =zeros(Nu,1);
@@ -82,32 +89,48 @@ function sys = mdlOutputs(t,x,u)
     truck_heading = u(3) * pi / 180;   %  the unit of heading in trucksim is deg, transform to rad
     truck_linear_v = u(4) / 3.6;           %  the unit of speed in trucksim is km/h, transform to m/s
     truck_angular_v = u(5) * pi / 180; %  the unit of angular in trucksim is deg/s, transform to rad/s
+    trailer_x = u(6);
+    trailer_y = u(7);
+    trailer_heading = u(8) * pi / 180;   %  the unit of heading in trucksim is deg, transform to rad
+    trailer_angular_v = u(9) * pi / 180; %  the unit of angular in trucksim is deg/s, transform to rad/s
     
     fprintf('num_i = %f \n',num_i); 
+    fprintf('trailer_x = %f \n',trailer_x); 
+    fprintf('trailer_y = %f \n',trailer_y); 
+    fprintf('trailer_heading = %f \n',trailer_heading); 
+    fprintf('trailer_angular_v = %f \n',trailer_angular_v); 
 %     truck_x_ = [];
 %     truck_y_ = [];
     truck_x_(num_i,1) = truck_x;
     truck_y_(num_i,1) = truck_y;
-
-    [fid , msg] = fopen('D:\CIDI\xuhao\codes\matlab\MPC_LQR\truck_x.txt','wt');
-    if fid == -1
-        disp(msg);
-    else
-        fprintf(fid, '%3.6f  \n' ,truck_x_);
-        fclose(fid);
-    end
-    [fid , msg] = fopen('D:\CIDI\xuhao\codes\matlab\MPC_LQR\truck_y.txt','wt');
-    if fid == -1
-        disp(msg);
-    else
-        fprintf(fid, '%3.6f  \n' ,truck_y_);
-        fclose(fid);
-    end
+    truck_heading_(num_i,1) = truck_heading;
+% 
+%     [fid , msg] = fopen('D:\CIDI\codes\matlab\MPC_LQR\truck_x.txt','wt');
+%     if fid == -1
+%         disp(msg);
+%     else
+%         fprintf(fid, '%3.6f  \n' ,truck_x_);
+%         fclose(fid);
+%     end
+%     [fid , msg] = fopen('D:\CIDI\codes\matlab\MPC_LQR\truck_y.txt','wt');
+%     if fid == -1
+%         disp(msg);
+%     else
+%         fprintf(fid, '%3.6f  \n' ,truck_y_);
+%         fclose(fid);
+%     end
+%     [fid , msg] = fopen('D:\CIDI\codes\matlab\MPC_LQR\truck_heading.txt','wt');
+%     if fid == -1
+%         disp(msg);
+%     else
+%         fprintf(fid, '%3.6f  \n' ,truck_heading_);
+%         fclose(fid);
+%     end
     
     target_points = readPlanPoints();
-    for i = 1:1:size(target_points.v)
-        target_points.v(i) = target_points.v(i) - 15;
-    end
+%     for i = 1:1:size(target_points.v)
+%         target_points.v(i) = target_points.v(i) - 15;
+%     end
     
     matrix_A =zeros(basic_state_size,basic_state_size);
     matrix_Ad =zeros(basic_state_size,basic_state_size); %vehicle state matrix (discrete-time)
@@ -152,8 +175,10 @@ function sys = mdlOutputs(t,x,u)
     %% matrix_state init
     
 %     [com_x,com_y] =ComputeCOMPosition(lr_,0,truck_x,truck_y,0);%compute COG based on truck position 
+    tic
     [lateral_error_,lateral_error_rate,heading_error_,heading_error_rate,index_min]= ...
         ComputeLateralErrors(truck_x,truck_y,truck_heading,truck_linear_v,truck_angular_v);% 
+    toc
     if(heading_error_  > pi)
         heading_error_ = heading_error_ - 2*pi;
     elseif (heading_error_  < -pi)
@@ -168,32 +193,41 @@ function sys = mdlOutputs(t,x,u)
     
     truck_lateral_err(num_i,1) = lateral_error_;
     truck_heading_err(num_i,1) = heading_error_;
-    [fid , msg] = fopen('D:\CIDI\xuhao\codes\matlab\MPC_LQR\truck_lateralerr.txt','wt');
-    if fid == -1
-        disp(msg);
-    else
-        fprintf(fid, '%3.6f  \n' ,truck_lateral_err);
-        fclose(fid);
+    truck_state_tmp = [num_i index_min target_points.x(index_min)  target_points.y(index_min) target_points.theta(index_min) ...
+                                  truck_x truck_y truck_heading lateral_error_ heading_error_];
+    
+    for i = 1:1:size(truck_state_tmp , 2)
+        truck_state_(num_i , i) = truck_state_tmp(i);
     end
-    [fid , msg] = fopen('D:\CIDI\xuhao\codes\matlab\MPC_LQR\truck_headingerr.txt','wt');
-    if fid == -1
-        disp(msg);
-    else
-        fprintf(fid, '%3.6f  \n' ,truck_heading_err);
-        fclose(fid);
-    end
+    
+%     [fid , msg] = fopen('D:\CIDI\codes\matlab\MPC_LQR\truck_lateralerr.txt','wt');
+%     if fid == -1
+%         disp(msg);
+%     else
+%         fprintf(fid, '%3.6f  \n' ,truck_lateral_err);
+%         fclose(fid);
+%     end
+%     [fid , msg] = fopen('D:\CIDI\codes\matlab\MPC_LQR\truck_headingerr.txt','wt');
+%     if fid == -1
+%         disp(msg);
+%     else
+%         fprintf(fid, '%3.6f  \n' ,truck_heading_err);
+%         fclose(fid);
+%     end
+    
         
     %% discretize matrix
     matrix_I = eye(basic_state_size,basic_state_size);
     matrix_Ad = (matrix_I + 0.5 * t_s * matrix_A) * inv(matrix_I - 0.5 * t_s * matrix_A);
     matrix_Bd = matrix_B * t_s;
     %% solve LQR problem
-
+   
     [ratio_lat,ratio_heading] = Interpolate(truck_linear_v);
     matrix_Q(1,1) = ratio_lat *  matrix_Q(1,1);
     matrix_Q(3,3) = ratio_heading *  matrix_Q(3,3);
     matrix_K = SolveLQRProblem(matrix_Ad,matrix_Bd,matrix_Q,matrix_R,lqr_eps_,lqr_max_iteration_);
     steer_angle_feedback = -(matrix_K * matrix_state) * 180 / pi * steer_transmission_ratio_;
+    
     
     %%   compute feedforward angle
     kv =  lr_ * mass_ / 2 / cf_ / wheelbase_ - lf_ * mass_ / 2 / cr_ / wheelbase_;
@@ -214,15 +248,30 @@ function sys = mdlOutputs(t,x,u)
     output(1,1) = steer_angle ;                         %unit deg
     output(2,1) = target_points.v(index_min) ;  %unit m/s
     fprintf('index_min = %f \n',index_min);
-    t_sim = 51.2; %51.2
-    if(num_i == (t_sim * 100+1))
+    t_sim = 20; %51.5  30
+    if (num_i == (t_sim * 100+1)) 
         plot_plot(truck_x_,truck_y_,target_points.x,target_points.y,truck_lateral_err,truck_heading_err);
+        T = table(truck_state_);
+        writetable(T,'truck_state_.csv');
+        
     end
+    
+   
+    
     previousOutput(1,1) = output(1,1);
     previousOutput(2,1) = output(2,1);  
     sys = output;
+     %% reach the terminal?
+%      if sqrt( (truck_x - target_points.x(size(target_points.x) , 1))^2 + (truck_y - target_points.y(size(target_points.y) , 1)) ^2 ) < 0.02
+%          sys = [0;0];
+%      else
+%          sys = output;
+%      end
+%     
+%     sys = mdlTerminate(t,x,u);% terminate simulation
+%     sys = [];
+%     
     
-    toc
     
     
 

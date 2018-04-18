@@ -18,16 +18,16 @@ function plot_plot(truck_x,truck_y,ref_x,ref_y,lateral_err,heading_err)
     %     plot(T,Lateral_ERR);
     % end
     plot(T,lateral_err,'g');
-    xlabel('采样时间 T(s)');
-    ylabel('lateral_error(m)');
+    xlabel('sampling time T(s)');
+    ylabel('lateral error(m)');
 
     subplot(2,1,2);
     % for i = 1:1:3000
     %     plot(T,Heading_ERR);
     % end
     plot(T,heading_err,'r');
-    xlabel('采样时间 T(s)');
-    ylabel('heading_error(rad)');
+    xlabel('sampling time T(s)');
+    ylabel('heading error(rad)');
 
 
 
