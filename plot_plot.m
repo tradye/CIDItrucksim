@@ -1,4 +1,4 @@
-function plot_plot(truck_x,truck_y,ref_x,ref_y,lateral_err,heading_err,trailer_x,trailer_y)
+function plot_plot(truck_x,truck_y,ref_x,ref_y,lateral_err,heading_err,trailer_x,trailer_y,num)
     global t_sim;
     figure(1)
     p1=plot(ref_x,ref_y,'r');
@@ -12,7 +12,8 @@ function plot_plot(truck_x,truck_y,ref_x,ref_y,lateral_err,heading_err,trailer_x
     hold on
     
     T = [];
-    for i = 1:1:(t_sim *100 + 1)
+%     for i = 1:1:(t_sim *100 + 1)
+    for i = 1:1:(num)
         T(i) = 0.01 *i;
     end
     figure(2)
