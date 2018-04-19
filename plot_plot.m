@@ -1,11 +1,14 @@
-function plot_plot(truck_x,truck_y,ref_x,ref_y,lateral_err,heading_err)
+function plot_plot(truck_x,truck_y,ref_x,ref_y,lateral_err,heading_err,trailer_x,trailer_y)
     global t_sim;
     figure(1)
-    plot(ref_x,ref_y,'r');
+    p1=plot(ref_x,ref_y,'r');
+    set(p1,'DisplayName','truck trajectory');
     hold on
     plot(truck_x,truck_y,'b');
     xlabel('X(m)');
     ylabel('Y(m)');
+    hold on
+    plot(trailer_x,trailer_y,'m');
     hold on
     
     T = [];

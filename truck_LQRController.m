@@ -68,6 +68,7 @@ function sys = mdlOutputs(t,x,u)
     persistent truck_x_;
     persistent truck_y_;
     persistent truck_heading_;
+    persistent truck_heading_rate;
     persistent truck_lateral_err;
     persistent truck_heading_err;
     persistent trailer_x_;
@@ -257,7 +258,8 @@ function sys = mdlOutputs(t,x,u)
     end
     %% s-function output
     truck_state_tmp = [num_i index_min target_points.x(index_min)  target_points.y(index_min) target_points.theta(index_min) ...
-                                  steer_angle truck_x truck_y truck_heading lateral_error_ heading_error_ trailer_x trailer_y trailer_heading trailer_angular_v];
+                                  steer_angle truck_x truck_y truck_heading truck_angular_v lateral_error_ heading_error_ ...
+                                  trailer_x trailer_y trailer_heading trailer_angular_v];
                               
     time_sequence(num_i,1) = truck_state_tmp(1);
     path_index(num_i,1) = truck_state_tmp(2);
@@ -268,24 +270,25 @@ function sys = mdlOutputs(t,x,u)
     truck_x_(num_i,1) = truck_state_tmp(7);
     truck_y_(num_i,1) = truck_state_tmp(8);
     truck_heading_(num_i,1) = truck_state_tmp(9);
-    truck_lateral_err(num_i,1) = truck_state_tmp(10);
-    truck_heading_err(num_i,1) = truck_state_tmp(11);
-    trailer_x_(num_i,1) = truck_state_tmp(12);
-    trailer_y_(num_i,1) = truck_state_tmp(13);
-    trailer_heading_(num_i,1) = truck_state_tmp(14);
-    trailer_heading_rate(num_i,1) = truck_state_tmp(15);
+    truck_heading_rate(num_i,1) = truck_state_tmp(10);
+    truck_lateral_err(num_i,1) = truck_state_tmp(11);
+    truck_heading_err(num_i,1) = truck_state_tmp(12);
+    trailer_x_(num_i,1) = truck_state_tmp(13);
+    trailer_y_(num_i,1) = truck_state_tmp(14);
+    trailer_heading_(num_i,1) = truck_state_tmp(15);
+    trailer_heading_rate(num_i,1) = truck_state_tmp(16);
     
     output(1,1) = steer_angle ;                         %unit deg
     output(2,1) = target_points.v(index_min) ;  %unit m/s
     fprintf('index_min = %f \n',index_min);
-    t_sim = 34 ;%51.5  30
+    t_sim = 21 ;%51.5  30
     if (num_i == (t_sim * 100+1) || ...
-            sqrt( (truck_x - target_points.x(size(target_points.x , 1)))^2 + (truck_y - target_points.y(size(target_points.y , 1))) ^2 ) < 0.02 )
-        plot_plot(truck_x_,truck_y_,target_points.x,target_points.y,truck_lateral_err,truck_heading_err);
+            sqrt( (truck_x - target_points.x(size(target_points.x , 1)))^2 + (truck_y - target_points.y(size(target_points.y , 1))) ^2 ) < 0.05 )
+        plot_plot(truck_x_,truck_y_,target_points.x,target_points.y,truck_lateral_err,truck_heading_err,trailer_x_,trailer_y_);
         T = table(time_sequence,path_index, path_x, path_y, path_heading, steer_angle_,...
-                   truck_x_, truck_y_, truck_heading_, truck_lateral_err, truck_heading_err ,...
-                   trailer_x_ ,trailer_y_ , trailer_heading_ ,  trailer_heading_rate);
-        writetable(T,'truck_state_.csv');
+                       truck_x_, truck_y_, truck_heading_,truck_heading_rate, truck_lateral_err, truck_heading_err ,...
+                       trailer_x_ ,trailer_y_ , trailer_heading_ ,  trailer_heading_rate);
+        writetable(T,'truckStateFollowing_.csv');
         
     end
     
