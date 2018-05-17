@@ -1,10 +1,7 @@
 %% truck8_MPCController S-function 20180502 xuhao husibo
-% states:truck_lateral_error,truck_lateral_error_rate,truck_heading_error,
-%        truck_heading_error_rate,
-%        trailer_lateral_error,trailer_lateral_error_rate,trailer_heading_error,
-%        trailer_heading_error_rate
-% input:x,y,theta(heading),linear_v,angular_v,trailer_x,trailer_y,trailer_heading,
-%       trailer_heading_rate
+% states:truck_lateral_error,truck_lateral_error_rate,truck_heading_error,truck_heading_error_rate,
+%           trailer_lateral_error,trailer_lateral_error_rate,trailer_heading_error,trailer_heading_error_rate
+% input:x,y,theta(heading),linear_v,angular_v,trailer_x,trailer_y,trailer_heading,trailer_heading_rate
 % output:steer_angle,v(v is constant)
 
 function [sys,x0,str,ts] = truck8_MPCController(t,x,u,flag)

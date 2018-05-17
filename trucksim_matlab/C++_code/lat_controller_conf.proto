@@ -1,0 +1,45 @@
+syntax = "proto2";
+
+package apollo.control;
+
+import "modules/control/proto/gain_scheduler_conf.proto";
+
+// simple optimal steer control param
+message LatControllerConf {
+  optional double ts = 1;            // sample time (dt) 0.01 now, configurable
+  // preview window n, preview time = preview window * ts
+  optional int32 preview_window = 2;
+  optional double cf = 3;
+  optional double cr = 4;            // N/rad
+  optional int32 mass_fl = 5;
+  optional int32 mass_fr = 6;
+  optional int32 mass_rl = 7;
+  optional int32 mass_rr = 8;
+  optional double eps = 9;          // converge threshold for lqr solver
+  repeated double matrix_q = 10;     // matrix_q size = 4 + preview_window
+  optional int32 cutoff_freq = 11;   // cutoff frequency
+  optional int32 mean_filter_window_size = 12;  // window size of mean filter
+  // for a normal car, it should be in range[16, 18]
+  optional int32 max_iteration = 13;  // maximum iteration for lqr solve
+  optional double max_lateral_acceleration = 14;  // limit aggressive steering
+  optional apollo.control.GainScheduler lat_err_gain_scheduler = 15;
+  optional apollo.control.GainScheduler heading_err_gain_scheduler = 16;
+
+  //added by xuhao,20180516
+  optional int32 truck_mass = 17;   //unit kg
+  optional int32 trailer_mass = 18; //unit kg
+  optional double C1 = 19;          // N/rad
+  optional double C2 = 20;          // N/rad
+  optional double C3 = 21;          // N/rad
+  optional double C4 = 22;          // N/rad
+  optional double C5 = 23;          // N/rad
+  optional double C6 = 24;          // N/rad
+  optional double b1 = 25;          // unit m,distance from first axle to COG of truck
+  optional double b2 = 26;          // unit m,distance from  COG of truck to second axle
+  optional double b3 = 27;          // unit m,distance from  COG of truck to third axle 
+  optional double b4 = 28;          // unit m,distance from  COG of trailer to forth axle 
+  optional double b5 = 29;          // unit m,distance from  COG of trailer to fifth axle
+  optional double b6 = 30;          // unit m,distance from  COG of trailer to sixth axle
+  optional double hR = 31;          // unit m,approximation of hitch-COG distance of trailer
+  optional double hF = 32;          // unit m,distance from truck-COG to hitch
+}

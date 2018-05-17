@@ -85,7 +85,7 @@ classdef TruckModel6Axle < matlab.mixin.Copyable
         ec = (-obj.b1*obj.C1+obj.b2*obj.C2+obj.b3*obj.C3)/obj.Vx;
 
         ed = (-obj.C4-obj.C5-obj.C6)/obj.Vx;
-        ee = o/home/cidi-xh/xuhao/Codes/github/apollo2.5_0505/modules/control/controller/cidi_mpc_controller.ccbj.C4+obj.C5+obj.C6;
+        ee = obj.C4+obj.C5+obj.C6;
         ef = (obj.b4*obj.C4+obj.b5*obj.C5+obj.b6*obj.C6)/obj.Vx;
 
         eg = (-obj.b1*obj.C1+obj.b2*obj.C2+obj.b3*obj.C3)/obj.Vx;
@@ -95,6 +95,7 @@ classdef TruckModel6Axle < matlab.mixin.Copyable
         ej = (obj.hF*obj.C4+obj.hF*obj.C5+obj.hF*obj.C6)/obj.Vx;
         ek = -obj.hF*obj.C4-obj.hF*obj.C5-obj.hF*obj.C6;
         el = obj.hF*(-obj.b4*obj.C4-obj.b5*obj.C5-obj.b6*obj.C6)/obj.Vx;
+
         em = (obj.hR*(obj.C4+obj.C5+obj.C6) + obj.b4*obj.C4+obj.b5*obj.C5+obj.b6*obj.C6)/obj.Vx;
         en = -obj.hR*(obj.C4+obj.C5+obj.C6)-(obj.b4*obj.C4+obj.b5*obj.C5+obj.b6*obj.C6);
         eo = (-obj.hR*(obj.b4*obj.C4+obj.b5*obj.C5+obj.b6*obj.C6)-(obj.C4*(obj.b4^2)+obj.C5*(obj.b5^2)+obj.C6*(obj.b6^2)))/obj.Vx;
